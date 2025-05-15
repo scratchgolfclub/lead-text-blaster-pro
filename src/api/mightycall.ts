@@ -7,7 +7,7 @@ import { getAccessToken } from '@/services/mightyCallService';
  */
 export const handleMightycallProxy = async (request: Request): Promise<Response> => {
   // Only allow POST requests
-  if (request.method !== 'POST') {
+  if (request.method !== 'POST' && request.method !== 'OPTIONS') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 
