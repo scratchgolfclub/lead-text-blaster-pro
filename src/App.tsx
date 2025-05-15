@@ -20,7 +20,7 @@ if (typeof window !== 'undefined' && !isProduction) {
   window.fetch = async function(input, init) {
     const url = input instanceof Request ? input.url : String(input);
     
-    // Only intercept local API requests that are NOT Netlify function calls
+    // Only intercept local API requests that start with /api/
     if (url.includes('/api/') && !url.includes('/.netlify/functions/')) {
       console.log('Intercepting local API request to:', url);
       const request = input instanceof Request ? input : new Request(url, init);

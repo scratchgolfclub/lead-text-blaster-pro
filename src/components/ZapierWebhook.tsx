@@ -12,9 +12,9 @@ const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at
 // Detect if we're running in production (on Netlify) or locally
 const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
 
-// Define API endpoints - use different endpoints for development and production
+// Define API endpoints based on environment - using the /api/ path which gets redirected via netlify.toml
 const API_ENDPOINT = isProduction 
-  ? '/.netlify/functions/mightycall' 
+  ? '/api/mightycall'  // This will get redirected to /.netlify/functions/mightycall via netlify.toml
   : '/api/mock-mightycall'; // This is a mock endpoint for development
 
 const ZapierWebhook: React.FC = () => {
@@ -48,24 +48,12 @@ const ZapierWebhook: React.FC = () => {
         title: "Development Mode",
         description: "In development mode, this will simulate a successful message send. Deploy to Netlify to use real SMS functionality.",
       });
-      
-      // Simulate a successful response in development mode
-      setTimeout(() => {
-        addLog("Mock response: Success (simulated)");
-        toast({
-          title: "Success (Simulated)",
-          description: `Message would have been sent to ${phoneNumber}`,
-        });
-        setIsLoading(false);
-      }, 1500);
-      
-      return;
     }
     
     addLog(`Sending SMS to ${phoneNumber} via ${API_ENDPOINT}...`);
     
     try {
-      // Make request to the Netlify function endpoint in production
+      // Make request to the API endpoint - redirected to Netlify function in production via netlify.toml
       addLog(`Making request to ${API_ENDPOINT}...`);
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
@@ -110,6 +98,14 @@ const ZapierWebhook: React.FC = () => {
         if (response.status === 404) {
           errorMessage = "Netlify function not found. Make sure you've deployed your application to Netlify with the required functions.";
           addLog("404 error: Netlify function not found");
+          
+          // More helpful guidance for 404 errors
+          toast({
+            title: "Function Not Found (404)",
+            description: "The Netlify function could not be found. This commonly happens when the functions haven't been deployed yet or the netlify.toml configuration is incorrect.",
+            variant: "destructive",
+          });
+          return;
         }
         
         // Provide more helpful error messages for common issues
@@ -235,7 +231,7 @@ const ZapierWebhook: React.FC = () => {
               <h3 className="font-semibold">Webhook Endpoint</h3>
               <p className="text-sm mt-1">
                 {isProduction 
-                  ? `${window.location.origin}/.netlify/functions/webhook` 
+                  ? `${window.location.origin}/api/webhook` 
                   : `${window.location.origin}/api/webhook (Note: This is simulated in development)`}
               </p>
               <p className="text-xs text-gray-500 mt-1">
