@@ -22,12 +22,13 @@ const API_KEY = "b3777535-eb5e-474d-801f-009491645883";
 const CLIENT_SECRET = "aec11e6836d7"; 
 const FROM_NUMBER = "+18444131701";
 
-// Updated API URLs with proper environment prefix (using 'api' for production)
-const API_PREFIX = "ccapi"; // Options: "sandbox" for testing, "api" or "ccapi" for production
+// API configuration based on documentation
+// Options for API_PREFIX: "sandbox" for testing, "api" for production
+const API_PREFIX = "api"; // Changed from "ccapi" to "api" as per documentation
 const API_VERSION = "v4";
 const BASE_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}`;
-const AUTH_URL = `${BASE_URL}/auth/token`;
-const SMS_URL = `${BASE_URL}/api/contactcenter/messages/send`;
+const AUTH_URL = `${BASE_URL}/auth/token`; // This matches the docs
+const SMS_URL = `${BASE_URL}/api/contactcenter/messages/send`; // Keep this path structure
 
 /**
  * Get a valid access token, either from cache or by requesting a new one
