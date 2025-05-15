@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +11,8 @@ const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at
 // Detect if we're running in production (on Netlify) or locally
 const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
 
-// Define API endpoints
-const API_ENDPOINT = isProduction 
-  ? '/.netlify/functions/mightycall'  // Production endpoint
-  : '/api/mightycall';                // Development endpoint
+// Define API endpoints - always use Netlify function endpoint
+const API_ENDPOINT = '/.netlify/functions/mightycall';
 
 const ZapierWebhook: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -44,8 +41,8 @@ const ZapierWebhook: React.FC = () => {
     addLog(`Sending SMS to ${phoneNumber} via ${API_ENDPOINT}...`);
     
     try {
-      // Make request to the appropriate endpoint based on environment
-      addLog(`Making request to ${API_ENDPOINT}...`);
+      // Always make direct request to the Netlify function endpoint
+      addLog(`Making direct request to ${API_ENDPOINT}...`);
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
