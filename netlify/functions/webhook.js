@@ -55,8 +55,9 @@ exports.handler = async (event, context) => {
       };
     }
     
-    // Call our mightycall function directly
-    const { handler } = require('./mightycall');
+    // Call our mightycall function directly without importing
+    // We need to pass the phone and message directly to the mightycall handler
+    const { handler: mightycallHandler } = require('./mightycall');
     
     const mightycallEvent = {
       httpMethod: 'POST',
@@ -66,7 +67,7 @@ exports.handler = async (event, context) => {
       })
     };
     
-    const mightycallResponse = await handler(mightycallEvent);
+    const mightycallResponse = await mightycallHandler(mightycallEvent);
     const mightycallData = JSON.parse(mightycallResponse.body);
     
     if (mightycallResponse.statusCode === 200 && mightycallData.success) {

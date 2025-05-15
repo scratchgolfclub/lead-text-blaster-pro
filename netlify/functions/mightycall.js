@@ -1,5 +1,6 @@
 
-const { getAccessToken } = require('../../dist/services/mightyCallService');
+// Instead of importing from dist, we'll include the necessary code directly
+// const { getAccessToken } = require('../../dist/services/mightyCallService');
 
 // Add CORS headers to all responses
 const corsHeaders = {
@@ -7,6 +8,52 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
+
+// Implement the getAccessToken function directly within the serverless function
+async function getAccessToken() {
+  // MightyCall API constants using environment variables
+  const API_KEY = process.env.MIGHTYCALL_API_KEY;
+  const CLIENT_SECRET = process.env.MIGHTYCALL_CLIENT_SECRET;
+  const API_PREFIX = process.env.MIGHTYCALL_API_PREFIX || "api";
+  const API_VERSION = process.env.MIGHTYCALL_API_VERSION || "v4";
+  const AUTH_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/auth/token`;
+
+  console.log("Requesting access token from:", AUTH_URL);
+  
+  const urlencoded = new URLSearchParams();
+  urlencoded.append("grant_type", "client_credentials");
+  urlencoded.append("client_id", API_KEY);
+  urlencoded.append("client_secret", CLIENT_SECRET);
+  
+  try {
+    const response = await fetch(AUTH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-api-key": API_KEY
+      },
+      body: urlencoded
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Auth error response:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+    
+    const authData = await response.json();
+    console.log("Auth succeeded, token received");
+    
+    return authData.access_token;
+  } catch (error) {
+    console.error("Error getting access token:", error);
+    throw error;
+  }
+}
 
 exports.handler = async (event, context) => {
   // Handle preflight OPTIONS request
