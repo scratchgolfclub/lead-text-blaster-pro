@@ -20,7 +20,7 @@ let tokenCache: TokenCache | null = null;
 // MightyCall API constants
 // Updated API credentials
 const API_KEY = "b3777535-eb5e-474d-801f-009491645883";
-const CLIENT_SECRET = "6fa7b8353fdc";
+const CLIENT_SECRET = "aec11e6836d7";
 const FROM_NUMBER = "+18444131701";
 const AUTH_URL = "https://ccapi.mightycall.com/v4/auth/token";
 const SMS_URL = "https://ccapi.mightycall.com/v4/api/contactcenter/messages/send";
