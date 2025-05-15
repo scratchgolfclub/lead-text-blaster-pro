@@ -1,9 +1,4 @@
 
-import { sendSMS } from '@/services/mightyCallService';
-
-// The default message to send to leads
-const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
-
 /**
  * Validate a phone number format
  * Simple validation - could be enhanced for production
@@ -40,10 +35,21 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
       });
     }
     
-    // Send the SMS
-    const success = await sendSMS(data.phone, DEFAULT_MESSAGE);
+    // Forward the request to our mightycall proxy API
+    const mightycallResponse = await fetch(new URL('/api/mightycall', request.url), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        phoneNumber: data.phone,
+        message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
+      })
+    });
     
-    if (success) {
+    const mightycallData = await mightycallResponse.json();
+    
+    if (mightycallResponse.ok && mightycallData.success) {
       return new Response(JSON.stringify({ 
         success: true,
         message: `SMS sent to ${data.phone}` 
@@ -53,7 +59,8 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
       });
     } else {
       return new Response(JSON.stringify({ 
-        error: 'Failed to send SMS' 
+        error: 'Failed to send SMS',
+        details: mightycallData.error || 'Unknown error'
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }

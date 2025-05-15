@@ -28,9 +28,23 @@ const API_PREFIX = "api"; // Using "api" for production
 const API_VERSION = "v4";
 const BASE_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}`;
 const AUTH_URL = `${BASE_URL}/auth/token`; // This matches the docs
-
-// The correct endpoint structure based on the documentation - removed "api/" from the path
 const SMS_URL = `${BASE_URL}/contactcenter/messages/send`; 
+
+// Function to handle API requests with CORS proxy fallback
+const handleApiRequest = async (url: string, options: RequestInit): Promise<Response> => {
+  try {
+    // First try direct API call (works in development mode)
+    console.log(`Attempting direct API call to ${url}`);
+    const response = await fetch(url, options);
+    return response;
+  } catch (error) {
+    console.error("Direct API call failed:", error);
+    console.log("The application is running in the browser, which may have CORS restrictions.");
+    
+    // For browser environments, we need to use a proxy or alternative approach
+    throw new Error("API call failed. CORS restrictions prevent direct API calls from the browser.");
+  }
+};
 
 /**
  * Get a valid access token, either from cache or by requesting a new one
@@ -63,7 +77,7 @@ export const getAccessToken = async (): Promise<string> => {
       body: urlencoded.toString()
     });
     
-    const response = await fetch(AUTH_URL, {
+    const response = await handleApiRequest(AUTH_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -117,7 +131,7 @@ export const sendSMS = async (phoneNumber: string, message: string): Promise<boo
     console.log("Sending SMS with payload:", payload);
     console.log("Sending to URL:", SMS_URL);
     
-    const response = await fetch(SMS_URL, {
+    const response = await handleApiRequest(SMS_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -141,7 +155,7 @@ export const sendSMS = async (phoneNumber: string, message: string): Promise<boo
         tokenCache = null; // Clear the cache to force new token
         const newAccessToken = await getAccessToken();
         
-        const retryResponse = await fetch(SMS_URL, {
+        const retryResponse = await handleApiRequest(SMS_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
-import { sendSMS } from '@/services/mightyCallService';
 
 // Default message to be sent to leads
 const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
@@ -34,9 +33,21 @@ const ZapierWebhook: React.FC = () => {
     addLog(`Sending SMS to ${phoneNumber}...`);
     
     try {
-      const success = await sendSMS(phoneNumber, message);
+      // Use our proxy API instead of direct MightyCall API call
+      const response = await fetch('/api/mightycall', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber,
+          message
+        }),
+      });
       
-      if (success) {
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
         toast({
           title: "Success",
           description: `Message sent to ${phoneNumber}`,
@@ -45,10 +56,10 @@ const ZapierWebhook: React.FC = () => {
       } else {
         toast({
           title: "Error",
-          description: "Failed to send SMS. Check logs for details.",
+          description: data.error || "Failed to send SMS. Check logs for details.",
           variant: "destructive",
         });
-        addLog(`Failed to send SMS to ${phoneNumber}`);
+        addLog(`Failed to send SMS to ${phoneNumber}: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("Error in handleSendManual:", error);
