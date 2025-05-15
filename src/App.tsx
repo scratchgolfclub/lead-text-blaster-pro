@@ -8,15 +8,10 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import apiHandler from './api/index';
 
-// Detect if we're running in production (on Netlify) or locally
-const isNetlifyProduction = window.location.hostname.includes('netlify.app') || 
-                           (window.location.hostname !== 'localhost' && 
-                            !window.location.hostname.includes('127.0.0.1') &&
-                            !window.location.hostname.includes('192.168'));
+// Always use production mode since pushes automatically go to Netlify
+const isProduction = true;
 
-const isProduction = false; // Force development mode until deployed to Netlify
-
-console.log(`Running in ${isProduction ? 'production' : 'development'} mode (${isNetlifyProduction ? 'on Netlify' : 'locally'})`);
+console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 // Setup API request handler for development only
 if (typeof window !== 'undefined' && !isProduction) {
