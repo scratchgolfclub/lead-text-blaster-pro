@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +12,10 @@ const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at
 // Detect if we're running in production (on Netlify) or locally
 const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
 
-// Define API endpoints - always use Netlify function endpoint
-const API_ENDPOINT = '/.netlify/functions/mightycall';
+// Define API endpoints - use different endpoints for development and production
+const API_ENDPOINT = isProduction 
+  ? '/.netlify/functions/mightycall' 
+  : '/api/mock-mightycall'; // This is a mock endpoint for development
 
 const ZapierWebhook: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -38,11 +41,32 @@ const ZapierWebhook: React.FC = () => {
     
     setIsLoading(true);
     addLog(`Environment: ${isProduction ? 'Production' : 'Development'}`);
+    
+    if (!isProduction) {
+      addLog("Development mode detected - using mock endpoint");
+      toast({
+        title: "Development Mode",
+        description: "In development mode, this will simulate a successful message send. Deploy to Netlify to use real SMS functionality.",
+      });
+      
+      // Simulate a successful response in development mode
+      setTimeout(() => {
+        addLog("Mock response: Success (simulated)");
+        toast({
+          title: "Success (Simulated)",
+          description: `Message would have been sent to ${phoneNumber}`,
+        });
+        setIsLoading(false);
+      }, 1500);
+      
+      return;
+    }
+    
     addLog(`Sending SMS to ${phoneNumber} via ${API_ENDPOINT}...`);
     
     try {
-      // Always make direct request to the Netlify function endpoint
-      addLog(`Making direct request to ${API_ENDPOINT}...`);
+      // Make request to the Netlify function endpoint in production
+      addLog(`Making request to ${API_ENDPOINT}...`);
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -82,11 +106,19 @@ const ZapierWebhook: React.FC = () => {
       } else {
         let errorMessage = data.error || "Failed to send SMS.";
         
+        // Check for 404 errors specifically
+        if (response.status === 404) {
+          errorMessage = "Netlify function not found. Make sure you've deployed your application to Netlify with the required functions.";
+          addLog("404 error: Netlify function not found");
+        }
+        
         // Provide more helpful error messages for common issues
         if (data.details) {
           if (typeof data.details === 'object') {
             addLog(`Error details: ${JSON.stringify(data.details)}`);
-            if (data.details.text && data.details.text.includes("CORS")) {
+            if (data.details.text && data.details.text.includes("404")) {
+              errorMessage = "Netlify function not found. Please make sure your application is deployed to Netlify with the required functions.";
+            } else if (data.details.text && data.details.text.includes("CORS")) {
               errorMessage = "CORS error detected. This app needs to be deployed to Netlify with proper environment variables.";
             } else if (data.details.message) {
               errorMessage += ` ${data.details.message}`;
@@ -135,7 +167,11 @@ const ZapierWebhook: React.FC = () => {
             <li>(Optional) <code>MIGHTYCALL_API_PREFIX</code> - API prefix (default: "api")</li>
             <li>(Optional) <code>MIGHTYCALL_API_VERSION</code> - API version (default: "v4")</li>
           </ul>
-          <p className="mt-2 font-medium">Note: This app must be deployed to Netlify to function properly due to CORS restrictions.</p>
+          <p className="mt-2 font-medium">
+            {isProduction 
+              ? "You are running in production mode. Make sure your Netlify functions are properly deployed."
+              : "You are running in development mode. SMS will be simulated locally. Deploy to Netlify for real functionality."}
+          </p>
         </AlertDescription>
       </Alert>
       
@@ -200,7 +236,7 @@ const ZapierWebhook: React.FC = () => {
               <p className="text-sm mt-1">
                 {isProduction 
                   ? `${window.location.origin}/.netlify/functions/webhook` 
-                  : `${window.location.origin}/api/webhook`}
+                  : `${window.location.origin}/api/webhook (Note: This is simulated in development)`}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Use this URL in your Zapier webhook action
