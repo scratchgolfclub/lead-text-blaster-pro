@@ -1,3 +1,4 @@
+
 // MightyCall API service for authentication and sending SMS
 
 interface AuthResponse {
@@ -17,6 +18,7 @@ interface TokenCache {
 let tokenCache: TokenCache | null = null;
 
 // MightyCall API constants
+// Updated API credentials
 const API_KEY = "b3777535-eb5e-474d-801f-009491645883";
 const CLIENT_SECRET = "6fa7b8353fdc";
 const FROM_NUMBER = "+18444131701";
@@ -44,6 +46,16 @@ export const getAccessToken = async (): Promise<string> => {
   urlencoded.append("client_secret", CLIENT_SECRET);
   
   try {
+    // Add more detailed logging
+    console.log("Auth request details:", {
+      url: AUTH_URL,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-api-key": API_KEY
+      },
+      body: urlencoded.toString()
+    });
+    
     const response = await fetch(AUTH_URL, {
       method: "POST",
       headers: {
@@ -55,10 +67,16 @@ export const getAccessToken = async (): Promise<string> => {
     
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("Auth error response:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
       throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
     
     const authData = await response.json() as AuthResponse;
+    console.log("Auth succeeded, token received");
     
     // Cache the token
     tokenCache = {
@@ -89,6 +107,8 @@ export const sendSMS = async (phoneNumber: string, message: string): Promise<boo
       attachments: []
     };
     
+    console.log("Sending SMS with payload:", payload);
+    
     const response = await fetch(SMS_URL, {
       method: "POST",
       headers: {
@@ -101,6 +121,11 @@ export const sendSMS = async (phoneNumber: string, message: string): Promise<boo
     
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("SMS send error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
       
       // If unauthorized, try once with a fresh token
       if (response.status === 401) {
@@ -120,9 +145,15 @@ export const sendSMS = async (phoneNumber: string, message: string): Promise<boo
         
         if (!retryResponse.ok) {
           const retryErrorText = await retryResponse.text();
+          console.error("SMS retry error:", {
+            status: retryResponse.status,
+            statusText: retryResponse.statusText,
+            body: retryErrorText
+          });
           throw new Error(`SMS send retry failed: ${retryResponse.status} ${retryResponse.statusText} - ${retryErrorText}`);
         }
         
+        console.log("SMS retry succeeded");
         return true; // Retry succeeded
       }
       
