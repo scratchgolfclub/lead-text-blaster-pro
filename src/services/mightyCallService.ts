@@ -18,12 +18,16 @@ interface TokenCache {
 let tokenCache: TokenCache | null = null;
 
 // MightyCall API constants
-// Updated API credentials
 const API_KEY = "b3777535-eb5e-474d-801f-009491645883";
-const CLIENT_SECRET = "aec11e6836d7";
+const CLIENT_SECRET = "aec11e6836d7"; 
 const FROM_NUMBER = "+18444131701";
-const AUTH_URL = "https://ccapi.mightycall.com/v4/auth/token";
-const SMS_URL = "https://ccapi.mightycall.com/v4/api/contactcenter/messages/send";
+
+// Updated API URLs with proper environment prefix (using 'api' for production)
+const API_PREFIX = "ccapi"; // Options: "sandbox" for testing, "api" or "ccapi" for production
+const API_VERSION = "v4";
+const BASE_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}`;
+const AUTH_URL = `${BASE_URL}/auth/token`;
+const SMS_URL = `${BASE_URL}/api/contactcenter/messages/send`;
 
 /**
  * Get a valid access token, either from cache or by requesting a new one
