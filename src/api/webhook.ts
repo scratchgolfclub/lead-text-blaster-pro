@@ -82,7 +82,7 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
     } else {
       return new Response(JSON.stringify({ 
         error: 'Failed to send SMS',
-        details: mightycallData.error || 'Unknown error'
+        details: mightycallData.error || mightycallData.details || 'Unknown error'
       }), { 
         status: 500,
         headers: { 

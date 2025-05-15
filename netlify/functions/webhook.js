@@ -79,7 +79,7 @@ exports.handler = async (event, context) => {
     }
 
     try {
-      // Call our mightycall function directly without importing
+      // Call our mightycall function directly
       console.log("Calling mightycall handler...");
       const { handler: mightycallHandler } = require('./mightycall');
       

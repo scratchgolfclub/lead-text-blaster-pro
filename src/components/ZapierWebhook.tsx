@@ -2,18 +2,17 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Phone } from "lucide-react";
 
 // Default message to be sent to leads
 const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
 
-// Always use production mode since pushes automatically go to Netlify
-const isProduction = true;
-
-// Define API endpoint - direct to Netlify functions
-const API_ENDPOINT = '/.netlify/functions/mightycall';  // Use the direct Netlify functions path
+// Direct Netlify function endpoint
+const API_ENDPOINT = '/.netlify/functions/mightycall';
 
 const ZapierWebhook: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -27,19 +26,55 @@ const ZapierWebhook: React.FC = () => {
     console.log(`LOG: ${log}`); // Also log to console for debugging
   };
   
-  const handleSendManual = async () => {
+  // Validate phone number format
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Basic validation for international format
+    const isValid = /^\+\d{10,15}$/.test(phone);
+    
+    if (!isValid) {
+      // If not valid but has some numbers, try to format it
+      if (/\d/.test(phone)) {
+        const formattedPhone = '+' + phone.replace(/[^\d]/g, '');
+        if (/^\+\d{10,15}$/.test(formattedPhone)) {
+          setPhoneNumber(formattedPhone);
+          return true;
+        }
+      }
+    }
+    
+    return isValid;
+  };
+  
+  const handleSendText = async () => {
     if (!phoneNumber) {
       toast({
         title: "Error",
-        description: "Please enter a valid phone number",
+        description: "Please enter a phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate phone number format
+    if (!validatePhoneNumber(phoneNumber)) {
+      toast({
+        title: "Invalid Phone Format",
+        description: "Please enter a valid phone number with country code (e.g., +12345678901)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!message.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message",
         variant: "destructive",
       });
       return;
     }
     
     setIsLoading(true);
-    addLog(`Environment: ${isProduction ? 'Production' : 'Development'}`);
-    
     addLog(`Sending SMS to ${phoneNumber} via ${API_ENDPOINT}...`);
     
     try {
@@ -115,7 +150,7 @@ const ZapierWebhook: React.FC = () => {
         addLog(`Failed to send SMS to ${phoneNumber}: ${errorMessage}`);
       }
     } catch (error) {
-      console.error("Error in handleSendManual:", error);
+      console.error("Error in handleSendText:", error);
       
       const errorMessage = error instanceof Error && error.message.includes("CORS") 
         ? "CORS error detected. This app needs to be deployed to Netlify to work properly."
@@ -145,17 +180,12 @@ const ZapierWebhook: React.FC = () => {
             <li>(Optional) <code>MIGHTYCALL_API_PREFIX</code> - API prefix (default: "api")</li>
             <li>(Optional) <code>MIGHTYCALL_API_VERSION</code> - API version (default: "v4")</li>
           </ul>
-          <p className="mt-2 font-medium">
-            {isProduction 
-              ? "You are running in production mode. Make sure your Netlify functions are properly deployed."
-              : "You are running in development mode. SMS will be simulated locally. Deploy to Netlify for real functionality."}
-          </p>
         </AlertDescription>
       </Alert>
       
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>MightyCall SMS Sender</CardTitle>
+          <CardTitle>Send Text Messages</CardTitle>
           <CardDescription>
             Send text messages to leads via MightyCall API
           </CardDescription>
@@ -171,9 +201,10 @@ const ZapierWebhook: React.FC = () => {
                 placeholder="+12345678901"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
+                className="font-mono"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Enter phone number with country code (e.g., +1 for US)
+                Include country code (e.g., +1 for US)
               </p>
             </div>
             
@@ -181,9 +212,9 @@ const ZapierWebhook: React.FC = () => {
               <label htmlFor="message" className="block text-sm font-medium mb-1">
                 Message
               </label>
-              <textarea
+              <Textarea
                 id="message"
-                className="w-full min-h-[100px] p-2 border rounded-md"
+                className="min-h-[100px] font-mono"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
@@ -192,45 +223,35 @@ const ZapierWebhook: React.FC = () => {
         </CardContent>
         <CardFooter>
           <Button
-            onClick={handleSendManual}
+            onClick={handleSendText}
             disabled={isLoading}
+            className="gap-2"
           >
-            {isLoading ? "Sending..." : "Send Manual Test"}
+            <Phone size={18} />
+            {isLoading ? "Sending..." : "Send Text Message"}
           </Button>
         </CardFooter>
       </Card>
       
       <Card>
         <CardHeader>
-          <CardTitle>Integration Guide</CardTitle>
-          <CardDescription>
-            How to integrate with Zapier
-          </CardDescription>
+          <CardTitle>API Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold">Webhook Endpoint</h3>
-              <p className="text-sm mt-1">
-                {isProduction 
-                  ? `${window.location.origin}/api/webhook` 
-                  : `${window.location.origin}/api/webhook (Note: This is simulated in development)`}
+              <h3 className="font-semibold">Webhook Endpoint (For Zapier Integration)</h3>
+              <p className="text-sm mt-1 font-mono">
+                {window.location.origin}/api/webhook
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Use this URL in your Zapier webhook action
+                Use this URL in your Zapier webhook action with JSON format: {"{ \"phone\": \"+12345678901\" }"}
               </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold">Expected JSON Format</h3>
-              <pre className="bg-gray-100 p-2 rounded text-sm">
-                {JSON.stringify({ phone: "+12345678901" }, null, 2)}
-              </pre>
             </div>
             
             <div className="border-t pt-4">
               <h3 className="font-semibold mb-2">Activity Logs ({logs.length})</h3>
-              <div className="bg-gray-100 p-2 rounded max-h-60 overflow-y-auto text-sm">
+              <div className="bg-gray-100 p-2 rounded max-h-60 overflow-y-auto text-sm font-mono">
                 {logs.length > 0 ? (
                   logs.map((log, index) => <div key={index}>{log}</div>)
                 ) : (
