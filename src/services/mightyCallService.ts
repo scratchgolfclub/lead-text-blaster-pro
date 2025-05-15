@@ -24,11 +24,13 @@ const FROM_NUMBER = "+18444131701";
 
 // API configuration based on documentation
 // Options for API_PREFIX: "sandbox" for testing, "api" for production
-const API_PREFIX = "api"; // Changed from "ccapi" to "api" as per documentation
+const API_PREFIX = "api"; // Using "api" for production
 const API_VERSION = "v4";
 const BASE_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}`;
 const AUTH_URL = `${BASE_URL}/auth/token`; // This matches the docs
-const SMS_URL = `${BASE_URL}/api/contactcenter/messages/send`; // Keep this path structure
+
+// The correct endpoint structure based on the documentation - removed "api/" from the path
+const SMS_URL = `${BASE_URL}/contactcenter/messages/send`; 
 
 /**
  * Get a valid access token, either from cache or by requesting a new one
@@ -113,6 +115,7 @@ export const sendSMS = async (phoneNumber: string, message: string): Promise<boo
     };
     
     console.log("Sending SMS with payload:", payload);
+    console.log("Sending to URL:", SMS_URL);
     
     const response = await fetch(SMS_URL, {
       method: "POST",
