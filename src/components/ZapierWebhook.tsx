@@ -10,9 +10,16 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
 
 // Detect if we're running in production (on Netlify) or locally
-const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+// Modified to check for actual Netlify environments
+const isNetlifyProduction = window.location.hostname.includes('netlify.app') || 
+                           (window.location.hostname !== 'localhost' && 
+                            !window.location.hostname.includes('127.0.0.1') &&
+                            !window.location.hostname.includes('192.168'));
 
-// Define API endpoints based on environment - using the /api/ path which gets redirected via netlify.toml
+// Force development mode for now until deployed to Netlify
+const isProduction = false; // Set to false for development until deployed
+
+// Define API endpoints based on environment
 const API_ENDPOINT = isProduction 
   ? '/api/mightycall'  // This will get redirected to /.netlify/functions/mightycall via netlify.toml
   : '/api/mock-mightycall'; // This is a mock endpoint for development
@@ -40,7 +47,7 @@ const ZapierWebhook: React.FC = () => {
     }
     
     setIsLoading(true);
-    addLog(`Environment: ${isProduction ? 'Production' : 'Development'}`);
+    addLog(`Environment: ${isProduction ? 'Production' : 'Development'} (${isNetlifyProduction ? 'Running on Netlify' : 'Running locally'})`);
     
     if (!isProduction) {
       addLog("Development mode detected - using mock endpoint");
@@ -96,14 +103,14 @@ const ZapierWebhook: React.FC = () => {
         
         // Check for 404 errors specifically
         if (response.status === 404) {
-          errorMessage = "Netlify function not found. Make sure you've deployed your application to Netlify with the required functions.";
+          errorMessage = "You're running locally. Use development mode for testing or deploy to Netlify for production.";
           addLog("404 error: Netlify function not found");
           
           // More helpful guidance for 404 errors
           toast({
-            title: "Function Not Found (404)",
-            description: "The Netlify function could not be found. This commonly happens when the functions haven't been deployed yet or the netlify.toml configuration is incorrect.",
-            variant: "destructive",
+            title: "Development Environment",
+            description: "You're running in development mode. The app simulates SMS sending but doesn't actually send messages until deployed to Netlify.",
+            variant: "default",
           });
           return;
         }
@@ -113,7 +120,7 @@ const ZapierWebhook: React.FC = () => {
           if (typeof data.details === 'object') {
             addLog(`Error details: ${JSON.stringify(data.details)}`);
             if (data.details.text && data.details.text.includes("404")) {
-              errorMessage = "Netlify function not found. Please make sure your application is deployed to Netlify with the required functions.";
+              errorMessage = "You're running locally. Use development mode for testing or deploy to Netlify for production.";
             } else if (data.details.text && data.details.text.includes("CORS")) {
               errorMessage = "CORS error detected. This app needs to be deployed to Netlify with proper environment variables.";
             } else if (data.details.message) {

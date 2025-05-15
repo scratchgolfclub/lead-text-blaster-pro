@@ -51,7 +51,8 @@ export const handleMockMightycall = async (request: Request): Promise<Response> 
       });
     }
 
-    // Simulate a successful response
+    // Simulate a successful response after a short delay to mimic network latency
+    await new Promise(resolve => setTimeout(resolve, 500));
     console.log(`MOCK: Would have sent SMS to ${data.phoneNumber}`);
     
     return new Response(JSON.stringify({
@@ -61,7 +62,8 @@ export const handleMockMightycall = async (request: Request): Promise<Response> 
         mock: true,
         timestamp: new Date().toISOString(),
         phoneNumber: data.phoneNumber,
-        messageLength: data.message.length
+        messageLength: data.message.length,
+        environment: "development"
       }
     }), {
       status: 200,

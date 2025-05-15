@@ -9,8 +9,14 @@ import NotFound from "./pages/NotFound";
 import apiHandler from './api/index';
 
 // Detect if we're running in production (on Netlify) or locally
-const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
-console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
+const isNetlifyProduction = window.location.hostname.includes('netlify.app') || 
+                           (window.location.hostname !== 'localhost' && 
+                            !window.location.hostname.includes('127.0.0.1') &&
+                            !window.location.hostname.includes('192.168'));
+
+const isProduction = false; // Force development mode until deployed to Netlify
+
+console.log(`Running in ${isProduction ? 'production' : 'development'} mode (${isNetlifyProduction ? 'on Netlify' : 'locally'})`);
 
 // Setup API request handler for development only
 if (typeof window !== 'undefined' && !isProduction) {
@@ -20,7 +26,7 @@ if (typeof window !== 'undefined' && !isProduction) {
   window.fetch = async function(input, init) {
     const url = input instanceof Request ? input.url : String(input);
     
-    // Only intercept local API requests that start with /api/
+    // Only intercept local API requests that start with /api/ and not Netlify function calls
     if (url.includes('/api/') && !url.includes('/.netlify/functions/')) {
       console.log('Intercepting local API request to:', url);
       const request = input instanceof Request ? input : new Request(url, init);
