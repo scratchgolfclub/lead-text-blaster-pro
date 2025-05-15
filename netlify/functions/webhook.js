@@ -54,35 +54,55 @@ exports.handler = async (event, context) => {
         })
       };
     }
-    
-    // Call our mightycall function directly without importing
-    // We need to pass the phone and message directly to the mightycall handler
-    const { handler: mightycallHandler } = require('./mightycall');
-    
-    const mightycallEvent = {
-      httpMethod: 'POST',
-      body: JSON.stringify({
-        phoneNumber: data.phone,
-        message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
-      })
-    };
-    
-    const mightycallResponse = await mightycallHandler(mightycallEvent);
-    const mightycallData = JSON.parse(mightycallResponse.body);
-    
-    if (mightycallResponse.statusCode === 200 && mightycallData.success) {
-      return {
-        statusCode: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          success: true,
-          message: `SMS sent to ${data.phone}` 
+
+    try {
+      // Call our mightycall function directly without importing
+      // We need to pass the phone and message directly to the mightycall handler
+      const { handler: mightycallHandler } = require('./mightycall');
+      
+      const mightycallEvent = {
+        httpMethod: 'POST',
+        body: JSON.stringify({
+          phoneNumber: data.phone,
+          message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
         })
       };
-    } else {
+      
+      console.log('Calling mightycall handler with:', JSON.parse(mightycallEvent.body));
+      
+      const mightycallResponse = await mightycallHandler(mightycallEvent);
+      console.log('Received response from mightycall handler:', mightycallResponse);
+      
+      const mightycallData = JSON.parse(mightycallResponse.body);
+      
+      if (mightycallResponse.statusCode === 200 && mightycallData.success) {
+        return {
+          statusCode: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            success: true,
+            message: `SMS sent to ${data.phone}` 
+          })
+        };
+      } else {
+        console.error('MightyCall request failed:', mightycallData);
+        return {
+          statusCode: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            error: 'Failed to send SMS',
+            details: mightycallData.error || 'Unknown error'
+          })
+        };
+      }
+    } catch (mightycallError) {
+      console.error('Error calling MightyCall function:', mightycallError);
       return {
         statusCode: 500,
         headers: {
@@ -90,8 +110,8 @@ exports.handler = async (event, context) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          error: 'Failed to send SMS',
-          details: mightycallData.error || 'Unknown error'
+          error: 'Failed to process MightyCall request',
+          details: mightycallError.message || String(mightycallError)
         })
       };
     }

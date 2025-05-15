@@ -19,6 +19,12 @@ async function getAccessToken() {
   const AUTH_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/auth/token`;
 
   console.log("Requesting access token from:", AUTH_URL);
+  console.log("Using API Key:", API_KEY ? "Key exists (not shown)" : "Missing API key");
+  console.log("Using Client Secret:", CLIENT_SECRET ? "Secret exists (not shown)" : "Missing client secret");
+  
+  if (!API_KEY || !CLIENT_SECRET) {
+    throw new Error("Missing required environment variables: MIGHTYCALL_API_KEY and/or MIGHTYCALL_CLIENT_SECRET");
+  }
   
   const urlencoded = new URLSearchParams();
   urlencoded.append("grant_type", "client_credentials");
@@ -56,6 +62,12 @@ async function getAccessToken() {
 }
 
 exports.handler = async (event, context) => {
+  console.log("MightyCall function called with event:", {
+    method: event.httpMethod,
+    path: event.path,
+    headers: event.headers
+  });
+
   // Handle preflight OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -102,72 +114,123 @@ exports.handler = async (event, context) => {
     const API_VERSION = process.env.MIGHTYCALL_API_VERSION || "v4";
     const SMS_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/contactcenter/messages/send`;
 
-    // Get a valid access token
-    const accessToken = await getAccessToken();
-
-    // Prepare the payload for MightyCall API
-    const payload = {
-      from: FROM_NUMBER,
-      to: [data.phoneNumber],
-      message: data.message,
-      attachments: []
-    };
-
-    console.log("Proxy sending SMS with payload:", payload);
-    console.log("Proxy sending to URL:", SMS_URL);
-
-    // Forward the request to MightyCall API
-    const response = await fetch(SMS_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-        "x-api-key": API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-
-    // Get the response from MightyCall API
-    const responseText = await response.text();
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      responseData = { text: responseText };
-    }
-
-    // Return the response from MightyCall API
-    if (!response.ok) {
-      console.error("Proxy SMS send error:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseData
-      });
+    // Check for required environment variables
+    if (!API_KEY) {
+      console.error("Missing API key in environment variables");
       return {
-        statusCode: response.status,
+        statusCode: 500,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          error: 'Failed to send SMS',
-          details: responseData
+          error: 'Server configuration error',
+          details: 'Missing MIGHTYCALL_API_KEY environment variable'
+        })
+      };
+    }
+    
+    if (!FROM_NUMBER) {
+      console.error("Missing FROM_NUMBER in environment variables");
+      return {
+        statusCode: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          error: 'Server configuration error',
+          details: 'Missing MIGHTYCALL_FROM_NUMBER environment variable'
         })
       };
     }
 
-    return {
-      statusCode: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        success: true,
-        message: `SMS sent to ${data.phoneNumber}`,
-        details: responseData
-      })
-    };
+    try {
+      // Get a valid access token
+      console.log("Attempting to get access token...");
+      const accessToken = await getAccessToken();
+      console.log("Access token obtained successfully");
+
+      // Prepare the payload for MightyCall API
+      const payload = {
+        from: FROM_NUMBER,
+        to: [data.phoneNumber],
+        message: data.message,
+        attachments: []
+      };
+
+      console.log("Proxy sending SMS with payload:", payload);
+      console.log("Proxy sending to URL:", SMS_URL);
+
+      // Forward the request to MightyCall API
+      const response = await fetch(SMS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          "x-api-key": API_KEY
+        },
+        body: JSON.stringify(payload)
+      });
+
+      // Get the response from MightyCall API
+      const responseText = await response.text();
+      console.log("MightyCall API response text:", responseText);
+      
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { text: responseText };
+        console.error("Failed to parse MightyCall response as JSON:", e);
+      }
+
+      // Return the response from MightyCall API
+      if (!response.ok) {
+        console.error("Proxy SMS send error:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseData
+        });
+        return {
+          statusCode: response.status,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            error: 'Failed to send SMS',
+            details: responseData
+          })
+        };
+      }
+
+      return {
+        statusCode: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          success: true,
+          message: `SMS sent to ${data.phoneNumber}`,
+          details: responseData
+        })
+      };
+    } catch (apiError) {
+      console.error("API request error:", apiError);
+      return {
+        statusCode: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          error: 'Error making API request',
+          details: apiError.message || String(apiError)
+        })
+      };
+    }
   } catch (error) {
     console.error('Error in MightyCall proxy:', error);
     return {
