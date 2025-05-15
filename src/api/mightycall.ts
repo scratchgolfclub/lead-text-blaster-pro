@@ -28,11 +28,19 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
       });
     }
 
-    // MightyCall API constants
-    const API_KEY = "b3777535-eb5e-474d-801f-009491645883";
-    const FROM_NUMBER = "+18444131701";
-    const API_PREFIX = "api";
-    const API_VERSION = "v4";
+    // MightyCall API constants using environment variables with fallbacks
+    const API_KEY = typeof process !== 'undefined' && process.env ? 
+      process.env.MIGHTYCALL_API_KEY : "b3777535-eb5e-474d-801f-009491645883";
+    
+    const FROM_NUMBER = typeof process !== 'undefined' && process.env ? 
+      process.env.MIGHTYCALL_FROM_NUMBER : "+18444131701";
+    
+    const API_PREFIX = typeof process !== 'undefined' && process.env && process.env.MIGHTYCALL_API_PREFIX ? 
+      process.env.MIGHTYCALL_API_PREFIX : "api";
+    
+    const API_VERSION = typeof process !== 'undefined' && process.env && process.env.MIGHTYCALL_API_VERSION ? 
+      process.env.MIGHTYCALL_API_VERSION : "v4";
+    
     const SMS_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/contactcenter/messages/send`;
 
     // Get a valid access token

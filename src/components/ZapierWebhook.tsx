@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Default message to be sent to leads
 const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
@@ -76,6 +77,20 @@ const ZapierWebhook: React.FC = () => {
   
   return (
     <div className="container mx-auto p-4">
+      <Alert className="mb-6 bg-amber-50 border-amber-200">
+        <AlertTitle className="text-amber-800">Environment Variables Required</AlertTitle>
+        <AlertDescription className="text-amber-700">
+          <p>This application requires the following environment variables in Netlify:</p>
+          <ul className="list-disc pl-6 mt-2 space-y-1">
+            <li><code>MIGHTYCALL_API_KEY</code> - Your MightyCall API key</li>
+            <li><code>MIGHTYCALL_CLIENT_SECRET</code> - Your MightyCall client secret</li>
+            <li><code>MIGHTYCALL_FROM_NUMBER</code> - Your MightyCall phone number</li>
+            <li>(Optional) <code>MIGHTYCALL_API_PREFIX</code> - API prefix (default: "api")</li>
+            <li>(Optional) <code>MIGHTYCALL_API_VERSION</code> - API version (default: "v4")</li>
+          </ul>
+        </AlertDescription>
+      </Alert>
+      
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>MightyCall SMS Sender</CardTitle>

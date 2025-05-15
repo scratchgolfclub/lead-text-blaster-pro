@@ -17,18 +17,26 @@ interface TokenCache {
 // In-memory token cache (in production, consider using a more persistent solution)
 let tokenCache: TokenCache | null = null;
 
-// MightyCall API constants
-const API_KEY = "b3777535-eb5e-474d-801f-009491645883";
-const CLIENT_SECRET = "aec11e6836d7"; 
-const FROM_NUMBER = "+18444131701";
+// MightyCall API constants - using environment variables with fallbacks for local development
+const API_KEY = typeof process !== 'undefined' && process.env ? 
+  process.env.MIGHTYCALL_API_KEY : "b3777535-eb5e-474d-801f-009491645883";
 
-// API configuration based on documentation
-// Options for API_PREFIX: "sandbox" for testing, "api" for production
-const API_PREFIX = "api"; // Using "api" for production
-const API_VERSION = "v4";
+const CLIENT_SECRET = typeof process !== 'undefined' && process.env ? 
+  process.env.MIGHTYCALL_CLIENT_SECRET : "aec11e6836d7";
+
+const FROM_NUMBER = typeof process !== 'undefined' && process.env ? 
+  process.env.MIGHTYCALL_FROM_NUMBER : "+18444131701";
+
+// API configuration based on documentation with configurable values
+const API_PREFIX = typeof process !== 'undefined' && process.env && process.env.MIGHTYCALL_API_PREFIX ? 
+  process.env.MIGHTYCALL_API_PREFIX : "api";
+
+const API_VERSION = typeof process !== 'undefined' && process.env && process.env.MIGHTYCALL_API_VERSION ? 
+  process.env.MIGHTYCALL_API_VERSION : "v4";
+
 const BASE_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}`;
-const AUTH_URL = `${BASE_URL}/auth/token`; // This matches the docs
-const SMS_URL = `${BASE_URL}/contactcenter/messages/send`; 
+const AUTH_URL = `${BASE_URL}/auth/token`; 
+const SMS_URL = `${BASE_URL}/contactcenter/messages/send`;
 
 // Function to handle API requests with CORS proxy fallback
 const handleApiRequest = async (url: string, options: RequestInit): Promise<Response> => {
