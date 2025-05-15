@@ -53,8 +53,9 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
       });
     }
     
-    // Forward the request to our mightycall proxy API
-    const mightycallResponse = await fetch(new URL('/api/mightycall', request.url), {
+    // Forward the request directly to the Netlify function
+    const origin = new URL(request.url).origin;
+    const mightycallResponse = await fetch(`${origin}/.netlify/functions/mightycall`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
