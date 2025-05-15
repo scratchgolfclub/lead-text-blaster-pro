@@ -12,11 +12,26 @@ const isValidPhoneNumber = (phone: string): boolean => {
  * Handle webhook requests from Zapier
  */
 export const handleWebhook = async (request: Request): Promise<Response> => {
+  // Handle preflight OPTIONS request
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
+  }
+  
   // Check if it's a POST request
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*' 
+      }
     });
   }
   
@@ -31,7 +46,10 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
         error: 'Invalid phone number format. Must be in international format (e.g., +12345678901)' 
       }), { 
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        }
       });
     }
     
@@ -55,7 +73,10 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
         message: `SMS sent to ${data.phone}` 
       }), { 
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        }
       });
     } else {
       return new Response(JSON.stringify({ 
@@ -63,7 +84,10 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
         details: mightycallData.error || 'Unknown error'
       }), { 
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        }
       });
     }
   } catch (error) {
@@ -73,7 +97,10 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
       details: error instanceof Error ? error.message : String(error)
     }), { 
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*' 
+      }
     });
   }
 };

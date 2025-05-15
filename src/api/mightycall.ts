@@ -10,7 +10,24 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
+  }
+
+  // Handle preflight OPTIONS request
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
     });
   }
 
@@ -24,7 +41,10 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
         error: 'Missing required fields: phoneNumber and message are required'
       }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
 
@@ -89,7 +109,10 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
         details: responseData
       }), {
         status: response.status,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
 
@@ -99,7 +122,10 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
       details: responseData
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
   } catch (error) {
     console.error('Error in MightyCall proxy:', error);
@@ -108,7 +134,10 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
       details: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*' 
+      }
     });
   }
 };

@@ -1,0 +1,20 @@
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[functions]
+  # Functions directory where Netlify can find your functions
+  directory = "netlify/functions"
+
+# Proxy API requests to your Netlify Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Handle client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

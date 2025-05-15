@@ -55,18 +55,35 @@ const ZapierWebhook: React.FC = () => {
         });
         addLog(`Successfully sent SMS to ${phoneNumber}`);
       } else {
+        let errorMessage = data.error || "Failed to send SMS.";
+        
+        // Provide more helpful error messages for common issues
+        if (data.details && typeof data.details === 'object') {
+          if (data.details.text && data.details.text.includes("CORS")) {
+            errorMessage = "CORS error detected. This app needs to be deployed to Netlify with proper environment variables.";
+          } else if (data.details.message) {
+            errorMessage += ` ${data.details.message}`;
+          }
+        }
+        
         toast({
           title: "Error",
-          description: data.error || "Failed to send SMS. Check logs for details.",
+          description: errorMessage,
           variant: "destructive",
         });
-        addLog(`Failed to send SMS to ${phoneNumber}: ${data.error || 'Unknown error'}`);
+        addLog(`Failed to send SMS to ${phoneNumber}: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Error in handleSendManual:", error);
+      
+      // Provide helpful message for CORS errors
+      const errorMessage = error instanceof Error && error.message.includes("CORS") 
+        ? "CORS error detected. This app needs to be deployed to Netlify to work properly."
+        : "An unexpected error occurred";
+        
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
       addLog(`Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -88,6 +105,7 @@ const ZapierWebhook: React.FC = () => {
             <li>(Optional) <code>MIGHTYCALL_API_PREFIX</code> - API prefix (default: "api")</li>
             <li>(Optional) <code>MIGHTYCALL_API_VERSION</code> - API version (default: "v4")</li>
           </ul>
+          <p className="mt-2 font-medium">Note: This app must be deployed to Netlify to function properly due to CORS restrictions.</p>
         </AlertDescription>
       </Alert>
       
