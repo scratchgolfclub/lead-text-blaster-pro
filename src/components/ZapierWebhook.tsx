@@ -9,6 +9,14 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 // Default message to be sent to leads
 const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
 
+// Detect if we're running in production (on Netlify) or locally
+const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+
+// Define API endpoints
+const API_ENDPOINT = isProduction 
+  ? '/.netlify/functions/mightycall'  // Production endpoint
+  : '/api/mightycall';                // Development endpoint
+
 const ZapierWebhook: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
@@ -32,12 +40,13 @@ const ZapierWebhook: React.FC = () => {
     }
     
     setIsLoading(true);
-    addLog(`Sending SMS to ${phoneNumber}...`);
+    addLog(`Environment: ${isProduction ? 'Production' : 'Development'}`);
+    addLog(`Sending SMS to ${phoneNumber} via ${API_ENDPOINT}...`);
     
     try {
-      // Use our proxy API instead of direct MightyCall API call
-      addLog(`Making request to /api/mightycall...`);
-      const response = await fetch('/api/mightycall', {
+      // Make request to the appropriate endpoint based on environment
+      addLog(`Making request to ${API_ENDPOINT}...`);
+      const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,8 +58,23 @@ const ZapierWebhook: React.FC = () => {
       });
       
       addLog(`Received response with status: ${response.status}`);
-      const data = await response.json();
-      addLog(`Response data: ${JSON.stringify(data)}`);
+      let responseText;
+      try {
+        responseText = await response.text();
+        addLog(`Raw response: ${responseText}`);
+      } catch (error) {
+        addLog(`Error reading response text: ${error instanceof Error ? error.message : String(error)}`);
+        responseText = '';
+      }
+      
+      let data;
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+        addLog(`Parsed response data: ${JSON.stringify(data)}`);
+      } catch (error) {
+        addLog(`Error parsing JSON response: ${error instanceof Error ? error.message : String(error)}`);
+        data = { error: 'Invalid JSON response', rawResponse: responseText };
+      }
       
       if (response.ok && data.success) {
         toast({
@@ -86,10 +110,9 @@ const ZapierWebhook: React.FC = () => {
     } catch (error) {
       console.error("Error in handleSendManual:", error);
       
-      // Provide helpful message for CORS errors
       const errorMessage = error instanceof Error && error.message.includes("CORS") 
         ? "CORS error detected. This app needs to be deployed to Netlify to work properly."
-        : "An unexpected error occurred";
+        : `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`;
         
       toast({
         title: "Error",
@@ -177,7 +200,11 @@ const ZapierWebhook: React.FC = () => {
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold">Webhook Endpoint</h3>
-              <p className="text-sm mt-1">{window.location.origin}/api/webhook</p>
+              <p className="text-sm mt-1">
+                {isProduction 
+                  ? `${window.location.origin}/.netlify/functions/webhook` 
+                  : `${window.location.origin}/api/webhook`}
+              </p>
               <p className="text-xs text-gray-500 mt-1">
                 Use this URL in your Zapier webhook action
               </p>
@@ -191,8 +218,8 @@ const ZapierWebhook: React.FC = () => {
             </div>
             
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">Activity Logs</h3>
-              <div className="bg-gray-100 p-2 rounded max-h-40 overflow-y-auto text-sm">
+              <h3 className="font-semibold mb-2">Activity Logs ({logs.length})</h3>
+              <div className="bg-gray-100 p-2 rounded max-h-60 overflow-y-auto text-sm">
                 {logs.length > 0 ? (
                   logs.map((log, index) => <div key={index}>{log}</div>)
                 ) : (

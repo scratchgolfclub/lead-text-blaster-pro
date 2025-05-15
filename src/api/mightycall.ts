@@ -59,12 +59,24 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
       console.log(`Reformatted phone number: ${phoneNumber}`);
     }
 
-    // Forward the request to our Netlify function
-    const apiUrl = new URL('/api/mightycall', request.url).toString();
-    console.log(`Forwarding request to Netlify function at: ${apiUrl}`);
+    // Detect if we're running locally or on Netlify
+    const isLocalDevelopment = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1'));
+    
+    let apiUrl;
+    if (isLocalDevelopment) {
+      // In local development, route to the mock API handler
+      apiUrl = new URL('/api/mightycall', request.url).toString();
+      console.log(`Local development detected, forwarding to mock API at: ${apiUrl}`);
+    } else {
+      // In production, route directly to the Netlify function
+      const origin = new URL(request.url).origin;
+      apiUrl = `${origin}/.netlify/functions/mightycall`;
+      console.log(`Production detected, forwarding to Netlify function at: ${apiUrl}`);
+    }
     
     try {
-      console.log("Making fetch request to Netlify function");
+      console.log(`Making fetch request to: ${apiUrl}`);
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -76,9 +88,10 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
         })
       });
       
-      console.log(`Netlify function responded with status: ${response.status}`);
+      console.log(`Response received with status: ${response.status}`);
       const responseText = await response.text();
       console.log(`Response body length: ${responseText.length}`);
+      console.log(`Raw response: ${responseText.substring(0, 1000)}`);
       
       let responseData;
       try {
@@ -100,9 +113,9 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
         }
       });
     } catch (fetchError) {
-      console.error('Error calling Netlify function:', fetchError);
+      console.error('Error making API request:', fetchError);
       return new Response(JSON.stringify({
-        error: 'Failed to reach the Netlify function',
+        error: 'Failed to reach the API endpoint',
         details: fetchError instanceof Error ? fetchError.message : String(fetchError)
       }), {
         status: 500,

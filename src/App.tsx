@@ -8,9 +8,14 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import apiHandler from './api/index';
 
-// Setup API request handler for webhook endpoints
-if (typeof window !== 'undefined') {
-  // Mock server API routes on the client side
+// Detect if we're running in production (on Netlify) or locally
+const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
+
+// Setup API request handler for webhook endpoints only in development
+if (typeof window !== 'undefined' && !isProduction) {
+  // Mock server API routes on the client side during development only
+  console.log('Setting up local API interceptor for development');
   const originalFetch = window.fetch;
   window.fetch = async function(input, init) {
     const url = input instanceof Request ? input.url : String(input);
