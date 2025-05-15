@@ -1,7 +1,4 @@
 
-// Instead of importing from dist, we'll include the necessary code directly
-// const { getAccessToken } = require('../../dist/services/mightyCallService');
-
 // Add CORS headers to all responses
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,6 +29,7 @@ async function getAccessToken() {
   urlencoded.append("client_secret", CLIENT_SECRET);
   
   try {
+    console.log("Making authentication request to MightyCall...");
     const response = await fetch(AUTH_URL, {
       method: "POST",
       headers: {
@@ -41,18 +39,31 @@ async function getAccessToken() {
       body: urlencoded
     });
     
+    const responseText = await response.text();
+    console.log(`Auth response status: ${response.status}, body length: ${responseText.length}`);
+    
     if (!response.ok) {
-      const errorText = await response.text();
       console.error("Auth error response:", {
         status: response.status,
         statusText: response.statusText,
-        body: errorText
+        body: responseText
       });
-      throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
+      throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${responseText}`);
     }
     
-    const authData = await response.json();
-    console.log("Auth succeeded, token received");
+    let authData;
+    try {
+      authData = JSON.parse(responseText);
+      console.log("Auth succeeded, token received");
+    } catch (e) {
+      console.error("Failed to parse auth response:", e);
+      throw new Error(`Failed to parse auth response: ${e.message}`);
+    }
+    
+    if (!authData.access_token) {
+      console.error("No access token in response:", authData);
+      throw new Error("No access token returned from MightyCall API");
+    }
     
     return authData.access_token;
   } catch (error) {
@@ -65,7 +76,7 @@ exports.handler = async (event, context) => {
   console.log("MightyCall function called with event:", {
     method: event.httpMethod,
     path: event.path,
-    headers: event.headers
+    headers: Object.keys(event.headers)
   });
 
   // Handle preflight OPTIONS request
@@ -145,11 +156,19 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Verify the phone number format
+    if (!data.phoneNumber.startsWith('+')) {
+      console.warn("Phone number does not start with +, adding it automatically");
+      data.phoneNumber = '+' + data.phoneNumber.replace(/[^\d]/g, '');
+    }
+    
+    console.log("Formatted phone number:", data.phoneNumber);
+
     try {
       // Get a valid access token
       console.log("Attempting to get access token...");
       const accessToken = await getAccessToken();
-      console.log("Access token obtained successfully");
+      console.log("Access token obtained successfully. Length:", accessToken.length);
 
       // Prepare the payload for MightyCall API
       const payload = {
@@ -159,10 +178,15 @@ exports.handler = async (event, context) => {
         attachments: []
       };
 
-      console.log("Proxy sending SMS with payload:", payload);
+      console.log("Proxy sending SMS with payload:", {
+        from: FROM_NUMBER,
+        to: data.phoneNumber,
+        messageLength: data.message.length
+      });
       console.log("Proxy sending to URL:", SMS_URL);
 
       // Forward the request to MightyCall API
+      console.log("Making request to MightyCall SMS API...");
       const response = await fetch(SMS_URL, {
         method: "POST",
         headers: {
@@ -175,11 +199,13 @@ exports.handler = async (event, context) => {
 
       // Get the response from MightyCall API
       const responseText = await response.text();
+      console.log(`MightyCall API SMS response status: ${response.status}`);
       console.log("MightyCall API response text:", responseText);
       
       let responseData;
       try {
         responseData = JSON.parse(responseText);
+        console.log("Parsed SMS response:", responseData);
       } catch (e) {
         responseData = { text: responseText };
         console.error("Failed to parse MightyCall response as JSON:", e);
@@ -205,6 +231,23 @@ exports.handler = async (event, context) => {
         };
       }
 
+      // MightyCall might return success status but indicate failures in the response body
+      if (responseData && responseData.errors && responseData.errors.length > 0) {
+        console.error("MightyCall returned errors:", responseData.errors);
+        return {
+          statusCode: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            error: 'MightyCall API reported errors',
+            details: responseData.errors
+          })
+        };
+      }
+
+      console.log("SMS sent successfully");
       return {
         statusCode: 200,
         headers: {

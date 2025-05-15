@@ -18,6 +18,7 @@ const ZapierWebhook: React.FC = () => {
   // Helper function to log messages
   const addLog = (log: string) => {
     setLogs(prevLogs => [...prevLogs, `${new Date().toLocaleTimeString()}: ${log}`]);
+    console.log(`LOG: ${log}`); // Also log to console for debugging
   };
   
   const handleSendManual = async () => {
@@ -35,6 +36,7 @@ const ZapierWebhook: React.FC = () => {
     
     try {
       // Use our proxy API instead of direct MightyCall API call
+      addLog(`Making request to /api/mightycall...`);
       const response = await fetch('/api/mightycall', {
         method: 'POST',
         headers: {
@@ -46,7 +48,9 @@ const ZapierWebhook: React.FC = () => {
         }),
       });
       
+      addLog(`Received response with status: ${response.status}`);
       const data = await response.json();
+      addLog(`Response data: ${JSON.stringify(data)}`);
       
       if (response.ok && data.success) {
         toast({
@@ -58,11 +62,17 @@ const ZapierWebhook: React.FC = () => {
         let errorMessage = data.error || "Failed to send SMS.";
         
         // Provide more helpful error messages for common issues
-        if (data.details && typeof data.details === 'object') {
-          if (data.details.text && data.details.text.includes("CORS")) {
-            errorMessage = "CORS error detected. This app needs to be deployed to Netlify with proper environment variables.";
-          } else if (data.details.message) {
-            errorMessage += ` ${data.details.message}`;
+        if (data.details) {
+          if (typeof data.details === 'object') {
+            addLog(`Error details: ${JSON.stringify(data.details)}`);
+            if (data.details.text && data.details.text.includes("CORS")) {
+              errorMessage = "CORS error detected. This app needs to be deployed to Netlify with proper environment variables.";
+            } else if (data.details.message) {
+              errorMessage += ` ${data.details.message}`;
+            }
+          } else {
+            addLog(`Error details: ${data.details}`);
+            errorMessage += ` ${data.details}`;
           }
         }
         

@@ -11,10 +11,24 @@ const corsHeaders = {
  */
 const isValidPhoneNumber = (phone) => {
   // Basic validation for international format (starts with + and has at least 10 digits)
-  return /^\+\d{10,15}$/.test(phone);
+  const isValid = /^\+\d{10,15}$/.test(phone);
+  
+  if (!isValid) {
+    console.log(`Phone validation failed for: ${phone}`);
+    return false;
+  }
+  
+  console.log(`Phone validation passed for: ${phone}`);
+  return true;
 };
 
 exports.handler = async (event, context) => {
+  console.log("Webhook function called with event:", {
+    method: event.httpMethod,
+    path: event.path,
+    headers: Object.keys(event.headers)
+  });
+  
   // Handle preflight OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -26,6 +40,7 @@ exports.handler = async (event, context) => {
   
   // Check if it's a POST request
   if (event.httpMethod !== 'POST') {
+    console.log(`Invalid method: ${event.httpMethod}`);
     return {
       statusCode: 405,
       headers: {
@@ -41,8 +56,16 @@ exports.handler = async (event, context) => {
     const data = JSON.parse(event.body);
     console.log('Webhook received data:', data);
     
+    // Format phone number if needed
+    let phoneNumber = data.phone;
+    if (!phoneNumber.startsWith('+')) {
+      console.log("Phone number doesn't start with +, adding it");
+      phoneNumber = '+' + phoneNumber.replace(/[^\d]/g, '');
+      console.log(`Reformatted phone number: ${phoneNumber}`);
+    }
+    
     // Validate the phone number
-    if (!data.phone || !isValidPhoneNumber(data.phone)) {
+    if (!phoneNumber || !isValidPhoneNumber(phoneNumber)) {
       return {
         statusCode: 400,
         headers: {
@@ -57,13 +80,13 @@ exports.handler = async (event, context) => {
 
     try {
       // Call our mightycall function directly without importing
-      // We need to pass the phone and message directly to the mightycall handler
+      console.log("Calling mightycall handler...");
       const { handler: mightycallHandler } = require('./mightycall');
       
       const mightycallEvent = {
         httpMethod: 'POST',
         body: JSON.stringify({
-          phoneNumber: data.phone,
+          phoneNumber: phoneNumber,
           message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
         })
       };
@@ -71,11 +94,20 @@ exports.handler = async (event, context) => {
       console.log('Calling mightycall handler with:', JSON.parse(mightycallEvent.body));
       
       const mightycallResponse = await mightycallHandler(mightycallEvent);
-      console.log('Received response from mightycall handler:', mightycallResponse);
+      console.log('Received response from mightycall handler:', mightycallResponse.statusCode);
       
-      const mightycallData = JSON.parse(mightycallResponse.body);
+      let mightycallData;
+      try {
+        mightycallData = JSON.parse(mightycallResponse.body);
+        console.log('Parsed mightycall response body:', mightycallData);
+      } catch (parseError) {
+        console.error('Error parsing mightycall response:', parseError);
+        console.log('Raw response body:', mightycallResponse.body);
+        mightycallData = { success: false, error: 'Failed to parse response' };
+      }
       
       if (mightycallResponse.statusCode === 200 && mightycallData.success) {
+        console.log(`SMS successfully sent to ${phoneNumber}`);
         return {
           statusCode: 200,
           headers: {
@@ -84,7 +116,7 @@ exports.handler = async (event, context) => {
           },
           body: JSON.stringify({ 
             success: true,
-            message: `SMS sent to ${data.phone}` 
+            message: `SMS sent to ${phoneNumber}` 
           })
         };
       } else {
@@ -97,7 +129,7 @@ exports.handler = async (event, context) => {
           },
           body: JSON.stringify({ 
             error: 'Failed to send SMS',
-            details: mightycallData.error || 'Unknown error'
+            details: mightycallData.error || mightycallData.details || 'Unknown error'
           })
         };
       }
