@@ -1,8 +1,9 @@
-
 /**
  * Validate phone number format
  */
 export const validatePhoneNumber = (phone: string): boolean => {
+  if (!phone) return false;
+  
   // Basic validation for international format
   const isValid = /^\+\d{10,15}$/.test(phone);
   
@@ -23,8 +24,13 @@ export const validatePhoneNumber = (phone: string): boolean => {
  * Format phone number to ensure it has the international format
  */
 export const formatPhoneNumber = (phone: string): string => {
-  if (!phone.startsWith('+')) {
-    return '+' + phone.replace(/[^\d]/g, '');
+  if (!phone) return '';
+  
+  // Remove all non-digit characters, but keep any existing + sign
+  const cleanPhone = phone.replace(/[^\d+]/g, '');
+  
+  if (!cleanPhone.startsWith('+')) {
+    return '+' + cleanPhone;
   }
-  return phone;
+  return cleanPhone;
 };

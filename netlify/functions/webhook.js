@@ -7,19 +7,33 @@ const corsHeaders = {
 };
 
 /**
+ * Format phone number to ensure it has the international format
+ */
+const formatPhoneNumber = (phone) => {
+  if (!phone) return '';
+  
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/[^\d+]/g, '');
+  
+  // Add + if it doesn't start with it
+  if (!digitsOnly.startsWith('+')) {
+    return '+' + digitsOnly;
+  }
+  
+  return digitsOnly;
+};
+
+/**
  * Validate a phone number format
  */
 const isValidPhoneNumber = (phone) => {
+  if (!phone) return false;
+  
   // Basic validation for international format (starts with + and has at least 10 digits)
   const isValid = /^\+\d{10,15}$/.test(phone);
   
-  if (!isValid) {
-    console.log(`Phone validation failed for: ${phone}`);
-    return false;
-  }
-  
-  console.log(`Phone validation passed for: ${phone}`);
-  return true;
+  console.log(`Phone validation ${isValid ? 'passed' : 'failed'} for: ${phone}`);
+  return isValid;
 };
 
 exports.handler = async (event, context) => {
@@ -53,19 +67,12 @@ exports.handler = async (event, context) => {
   
   try {
     // Parse the request body
-    const data = JSON.parse(event.body);
-    console.log('Webhook received data:', data);
-    
-    // Format phone number if needed
-    let phoneNumber = data.phone;
-    if (!phoneNumber.startsWith('+')) {
-      console.log("Phone number doesn't start with +, adding it");
-      phoneNumber = '+' + phoneNumber.replace(/[^\d]/g, '');
-      console.log(`Reformatted phone number: ${phoneNumber}`);
-    }
-    
-    // Validate the phone number
-    if (!phoneNumber || !isValidPhoneNumber(phoneNumber)) {
+    let data;
+    try {
+      data = JSON.parse(event.body);
+      console.log('Webhook received data:', data);
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
       return {
         statusCode: 400,
         headers: {
@@ -73,7 +80,68 @@ exports.handler = async (event, context) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          error: 'Invalid phone number format. Must be in international format (e.g., +12345678901)' 
+          error: 'Invalid JSON payload',
+          details: parseError.message
+        })
+      };
+    }
+    
+    // Check for phone number in different possible formats from Zapier
+    // Zapier might send it as data.phone, data.Phone, or some other variation
+    let phoneNumber = null;
+    
+    // Try to find the phone number in the payload (case insensitive)
+    for (const key in data) {
+      if (typeof data[key] === 'string' && key.toLowerCase().includes('phone')) {
+        phoneNumber = data[key];
+        console.log(`Found phone number in field '${key}': ${phoneNumber}`);
+        break;
+      }
+    }
+    
+    // If we still don't have a phone number, try the first string value we can find
+    if (!phoneNumber) {
+      for (const key in data) {
+        if (typeof data[key] === 'string' && /\d/.test(data[key])) {
+          phoneNumber = data[key];
+          console.log(`Found potential phone number in field '${key}': ${phoneNumber}`);
+          break;
+        }
+      }
+    }
+    
+    // If no phone number found, return error
+    if (!phoneNumber) {
+      return {
+        statusCode: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          error: 'No phone number found in the request data',
+          receivedData: data
+        })
+      };
+    }
+    
+    // Format the phone number
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    console.log(`Formatted phone number: ${formattedPhone}`);
+    
+    // Validate the phone number
+    if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
+      return {
+        statusCode: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          error: 'Invalid phone number format after formatting',
+          original: phoneNumber,
+          formatted: formattedPhone,
+          validFormat: 'Must be in international format (e.g., +12345678901)'
         })
       };
     }
@@ -86,7 +154,7 @@ exports.handler = async (event, context) => {
       const mightycallEvent = {
         httpMethod: 'POST',
         body: JSON.stringify({
-          phoneNumber: phoneNumber,
+          phoneNumber: formattedPhone,
           message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
         })
       };
@@ -107,7 +175,7 @@ exports.handler = async (event, context) => {
       }
       
       if (mightycallResponse.statusCode === 200 && mightycallData.success) {
-        console.log(`SMS successfully sent to ${phoneNumber}`);
+        console.log(`SMS successfully sent to ${formattedPhone}`);
         return {
           statusCode: 200,
           headers: {
@@ -116,7 +184,7 @@ exports.handler = async (event, context) => {
           },
           body: JSON.stringify({ 
             success: true,
-            message: `SMS sent to ${phoneNumber}` 
+            message: `SMS sent to ${formattedPhone}` 
           })
         };
       } else {

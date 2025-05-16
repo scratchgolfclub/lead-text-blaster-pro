@@ -1,12 +1,5 @@
 
-/**
- * Validate a phone number format
- * Simple validation - could be enhanced for production
- */
-const isValidPhoneNumber = (phone: string): boolean => {
-  // Basic validation for international format (starts with + and has at least 10 digits)
-  return /^\+\d{10,15}$/.test(phone);
-};
+import { validatePhoneNumber, formatPhoneNumber } from '../components/zapier/phoneUtils';
 
 /**
  * Handle webhook requests from Zapier
@@ -40,10 +33,52 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
     const data = await request.json();
     console.log('Webhook received data:', data);
     
-    // Validate the phone number
-    if (!data.phone || !isValidPhoneNumber(data.phone)) {
+    // Check for phone number in different possible formats from Zapier
+    // Zapier might send it as data.phone, data.Phone, or some other variation
+    let phoneNumber = null;
+    
+    // Try to find the phone number in the payload (case insensitive)
+    for (const key in data) {
+      if (typeof data[key] === 'string' && key.toLowerCase().includes('phone')) {
+        phoneNumber = data[key];
+        console.log(`Found phone number in field '${key}': ${phoneNumber}`);
+        break;
+      }
+    }
+    
+    // If we still don't have a phone number, try the first string value we can find
+    if (!phoneNumber) {
+      for (const key in data) {
+        if (typeof data[key] === 'string' && /\d/.test(data[key])) {
+          phoneNumber = data[key];
+          console.log(`Found potential phone number in field '${key}': ${phoneNumber}`);
+          break;
+        }
+      }
+    }
+    
+    // If no phone number found, return error
+    if (!phoneNumber) {
       return new Response(JSON.stringify({ 
-        error: 'Invalid phone number format. Must be in international format (e.g., +12345678901)' 
+        error: 'No phone number found in the request data',
+        receivedData: data
+      }), { 
+        status: 400,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        }
+      });
+    }
+    
+    // Format and validate the phone number
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    if (!validatePhoneNumber(formattedPhone)) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid phone number format after formatting',
+        original: phoneNumber,
+        formatted: formattedPhone,
+        validFormat: 'Must be in international format (e.g., +12345678901)'
       }), { 
         status: 400,
         headers: { 
@@ -55,13 +90,13 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
     
     // Forward the request directly to the Netlify function
     const origin = new URL(request.url).origin;
-const mightycallResponse = await fetch(`${origin}/api/mightycall`, {
+    const mightycallResponse = await fetch(`${origin}/api/mightycall`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        phoneNumber: data.phone,
+        phoneNumber: formattedPhone,
         message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
       })
     });
@@ -71,7 +106,7 @@ const mightycallResponse = await fetch(`${origin}/api/mightycall`, {
     if (mightycallResponse.ok && mightycallData.success) {
       return new Response(JSON.stringify({ 
         success: true,
-        message: `SMS sent to ${data.phone}` 
+        message: `SMS sent to ${formattedPhone}` 
       }), { 
         status: 200,
         headers: { 
