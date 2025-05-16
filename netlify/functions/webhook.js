@@ -37,23 +37,11 @@ const isValidPhoneNumber = (phone) => {
 };
 
 /**
- * Get message text based on location
+ * Validate the location
  */
-const getMessageForLocation = (location, customMessage = '') => {
-  const customMessageSuffix = customMessage ? ` ${customMessage}` : '';
-  
-  switch (location.toLowerCase()) {
-    case 'downtown':
-      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club downtown. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?${customMessageSuffix}`;
-    case 'loverslane':
-      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club at Lovers Lane. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?${customMessageSuffix}`;
-    case 'plano':
-      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club in Plano. Would you like to reserve your spot on the waitlist?${customMessageSuffix}`;
-    default:
-      const error = `Invalid location specified: ${location}. Valid options are: downtown, loverslane, plano`;
-      console.error(error);
-      throw new Error(error);
-  }
+const isValidLocation = (location) => {
+  const validLocations = ['downtown', 'loverslane', 'plano'];
+  return validLocations.includes(location.toLowerCase());
 };
 
 /**
@@ -129,7 +117,37 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ 
         error: 'Missing location parameter',
         validOptions: 'downtown, loverslane, plano',
-        expectedFormat: '/api/webhook/[location]/[optional_message]'
+        expectedFormat: '/api/webhook/[location]/[message]'
+      })
+    };
+  }
+  
+  // Validate location
+  if (!isValidLocation(location)) {
+    return {
+      statusCode: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        error: `Invalid location: ${location}`,
+        validOptions: 'downtown, loverslane, plano'
+      })
+    };
+  }
+  
+  // If no custom message was provided, return an error
+  if (!customMessage) {
+    return {
+      statusCode: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        error: 'Missing message parameter',
+        expectedFormat: '/api/webhook/[location]/[message]'
       })
     };
   }
@@ -215,25 +233,9 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Get the appropriate message for the location
-    let messageText;
-    try {
-      messageText = getMessageForLocation(location, customMessage);
-      console.log(`Using message text: "${messageText}"`);
-    } catch (error) {
-      console.error('Error determining message text:', error);
-      return {
-        statusCode: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          error: error.message || 'Invalid location parameter',
-          validOptions: 'downtown, loverslane, plano'
-        })
-      };
-    }
+    // Use the custom message directly
+    const messageText = customMessage;
+    console.log(`Using custom message: "${messageText}"`);
 
     try {
       // Call our mightycall function directly
@@ -277,7 +279,7 @@ exports.handler = async (event, context) => {
             success: true,
             message: `SMS sent to ${formattedPhone}`,
             location: location,
-            customMessage: customMessage || 'None provided'
+            customMessage: customMessage
           })
         };
       } else {

@@ -4,22 +4,10 @@ import { validatePhoneNumber, formatPhoneNumber } from '../components/zapier/pho
 // Define valid locations as an enum type
 type LocationType = 'downtown' | 'loverslane' | 'plano';
 
-// Function to get message text based on location
-const getMessageForLocation = (location: string, customMessage?: string): string => {
-  // If there's a custom message, use it as a suffix to the location-specific message
-  const customMessageSuffix = customMessage ? ` ${customMessage}` : '';
-  
-  switch (location.toLowerCase() as LocationType) {
-    case 'downtown':
-      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club downtown. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?${customMessageSuffix}`;
-    case 'loverslane':
-      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club at Lovers Lane. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?${customMessageSuffix}`;
-    case 'plano':
-      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club in Plano. Would you like to reserve your spot on the waitlist?${customMessageSuffix}`;
-    default:
-      console.error(`Invalid location specified: ${location}`);
-      throw new Error(`Invalid location: ${location}. Valid options are: downtown, loverslane, plano`);
-  }
+// Function to validate the location param
+const isValidLocation = (location: string): boolean => {
+  const validLocations = ['downtown', 'loverslane', 'plano'];
+  return validLocations.includes(location.toLowerCase());
 };
 
 // Parse URL parameters from the webhook path
@@ -83,7 +71,35 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
       return new Response(JSON.stringify({ 
         error: 'Missing location parameter',
         validOptions: 'downtown, loverslane, plano',
-        expectedFormat: '/api/webhook/[location]/[optional_message]'
+        expectedFormat: '/api/webhook/[location]/[message]'
+      }), { 
+        status: 400,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        }
+      });
+    }
+    
+    // Validate location
+    if (!isValidLocation(location)) {
+      return new Response(JSON.stringify({ 
+        error: `Invalid location: ${location}`,
+        validOptions: 'downtown, loverslane, plano'
+      }), { 
+        status: 400,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        }
+      });
+    }
+    
+    // If no custom message was provided, return an error
+    if (!customMessage) {
+      return new Response(JSON.stringify({ 
+        error: 'Missing message parameter',
+        expectedFormat: '/api/webhook/[location]/[message]'
       }), { 
         status: 400,
         headers: { 
@@ -152,25 +168,9 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
       });
     }
     
-    // Get the appropriate message for the location
-    let messageText;
-    try {
-      messageText = getMessageForLocation(location, customMessage);
-    } catch (error) {
-      return new Response(JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Invalid location parameter',
-        validOptions: 'downtown, loverslane, plano'
-      }), { 
-        status: 400,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*' 
-        }
-      });
-    }
-    
-    // Log the final message that will be sent
-    console.log(`Sending message to ${formattedPhone}: "${messageText}"`);
+    // Use the custom message directly without any default messages
+    const messageText = customMessage;
+    console.log(`Using custom message: "${messageText}"`);
     
     // Forward the request directly to the Netlify function
     const origin = new URL(request.url).origin;
@@ -192,7 +192,7 @@ export const handleWebhook = async (request: Request): Promise<Response> => {
         success: true,
         message: `SMS sent to ${formattedPhone}`,
         location: location,
-        customMessage: customMessage || 'None provided'
+        customMessage: customMessage
       }), { 
         status: 200,
         headers: { 
