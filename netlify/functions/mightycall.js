@@ -13,7 +13,7 @@ async function getAccessToken() {
   const CLIENT_SECRET = process.env.MIGHTYCALL_CLIENT_SECRET;
   const API_PREFIX = process.env.MIGHTYCALL_API_PREFIX || "api";
   const API_VERSION = process.env.MIGHTYCALL_API_VERSION || "v4";
-  const AUTH_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/auth/token`;
+  const AUTH_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/api/auth/token`;
 
   console.log("Requesting access token from:", AUTH_URL);
   console.log("Using API Key:", API_KEY ? "Key exists (not shown)" : "Missing API key");
@@ -123,7 +123,7 @@ exports.handler = async (event, context) => {
     const FROM_NUMBER = process.env.MIGHTYCALL_FROM_NUMBER;
     const API_PREFIX = process.env.MIGHTYCALL_API_PREFIX || "api";
     const API_VERSION = process.env.MIGHTYCALL_API_VERSION || "v4";
-    const SMS_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/contactcenter/messages/send`;
+    const SMS_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/api/contactcenter/messages/send`;
 
     // Check for required environment variables
     if (!API_KEY) {
