@@ -10,8 +10,8 @@ export default function handler(request: Request) {
   
   console.log(`API handler processing request for: ${path}`);
   
-  // Route to the webhook handler
-  if (path.endsWith('/api/webhook')) {
+  // Route to the webhook handler with parameters
+  if (path.includes('/api/webhook')) {
     console.log('Routing to webhook handler');
     return handleWebhook(request);
   }

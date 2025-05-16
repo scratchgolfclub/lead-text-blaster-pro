@@ -7,6 +7,12 @@
   # Functions directory where Netlify can find your functions
   directory = "netlify/functions"
 
+# Proxy API requests for webhook with parameters to your Netlify Function
+[[redirects]]
+  from = "/api/webhook/*"
+  to = "/.netlify/functions/webhook/:splat"
+  status = 200
+
 # Proxy API requests to your Netlify Functions
 [[redirects]]
   from = "/api/*"

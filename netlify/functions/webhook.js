@@ -36,6 +36,54 @@ const isValidPhoneNumber = (phone) => {
   return isValid;
 };
 
+/**
+ * Get message text based on location
+ */
+const getMessageForLocation = (location, customMessage = '') => {
+  const customMessageSuffix = customMessage ? ` ${customMessage}` : '';
+  
+  switch (location.toLowerCase()) {
+    case 'downtown':
+      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club downtown. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?${customMessageSuffix}`;
+    case 'loverslane':
+      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club at Lovers Lane. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?${customMessageSuffix}`;
+    case 'plano':
+      return `Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club in Plano. Would you like to reserve your spot on the waitlist?${customMessageSuffix}`;
+    default:
+      const error = `Invalid location specified: ${location}. Valid options are: downtown, loverslane, plano`;
+      console.error(error);
+      throw new Error(error);
+  }
+};
+
+/**
+ * Parse URL parameters from the webhook path
+ */
+const parseWebhookParams = (path) => {
+  const pathParts = path.split('/');
+  
+  // URL format is expected to be /api/webhook/[location]/[message]
+  // or /.netlify/functions/webhook/[location]/[message]
+  
+  // Find the index of 'webhook' in the path
+  const webhookIndex = pathParts.findIndex(part => part === 'webhook');
+  
+  if (webhookIndex === -1 || webhookIndex === pathParts.length - 1) {
+    return {};
+  }
+  
+  // Extract location (should be the part after 'webhook')
+  const location = pathParts[webhookIndex + 1];
+  
+  // Extract custom message if available (would be after location)
+  let customMessage = undefined;
+  if (webhookIndex + 2 < pathParts.length) {
+    customMessage = pathParts[webhookIndex + 2].replace(/_/g, ' '); // Replace underscores with spaces
+  }
+  
+  return { location, customMessage };
+};
+
 exports.handler = async (event, context) => {
   console.log("Webhook function called with event:", {
     method: event.httpMethod,
@@ -43,6 +91,10 @@ exports.handler = async (event, context) => {
     // Safely access headers if they exist
     headers: event.headers ? Object.keys(event.headers) : []
   });
+  
+  // Extract parameters from the path
+  const { location, customMessage } = parseWebhookParams(event.path);
+  console.log(`Extracted parameters - location: ${location || 'not provided'}, customMessage: ${customMessage || 'not provided'}`);
   
   // Handle preflight OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
@@ -66,11 +118,27 @@ exports.handler = async (event, context) => {
     };
   }
   
+  // If no location was provided, return an error
+  if (!location) {
+    return {
+      statusCode: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        error: 'Missing location parameter',
+        validOptions: 'downtown, loverslane, plano',
+        expectedFormat: '/api/webhook/[location]/[optional_message]'
+      })
+    };
+  }
+  
   try {
     // Parse the request body
     let data;
     try {
-      data = JSON.parse(event.body);
+      data = JSON.parse(event.body || '{}');
       console.log('Webhook received data:', data);
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
@@ -147,6 +215,26 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Get the appropriate message for the location
+    let messageText;
+    try {
+      messageText = getMessageForLocation(location, customMessage);
+      console.log(`Using message text: "${messageText}"`);
+    } catch (error) {
+      console.error('Error determining message text:', error);
+      return {
+        statusCode: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          error: error.message || 'Invalid location parameter',
+          validOptions: 'downtown, loverslane, plano'
+        })
+      };
+    }
+
     try {
       // Call our mightycall function directly
       console.log("Calling mightycall handler...");
@@ -156,7 +244,7 @@ exports.handler = async (event, context) => {
         httpMethod: 'POST',
         body: JSON.stringify({
           phoneNumber: formattedPhone,
-          message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
+          message: messageText
         }),
         // Add empty headers to avoid null reference errors
         headers: {}
@@ -187,7 +275,9 @@ exports.handler = async (event, context) => {
           },
           body: JSON.stringify({ 
             success: true,
-            message: `SMS sent to ${formattedPhone}` 
+            message: `SMS sent to ${formattedPhone}`,
+            location: location,
+            customMessage: customMessage || 'None provided'
           })
         };
       } else {
