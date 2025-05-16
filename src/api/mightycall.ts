@@ -55,9 +55,7 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
 let phoneNumber = data.phoneNumber; if (!phoneNumber.startsWith('+1')) { console.log("Phone number doesn't start with +1, adding it"); phoneNumber = '+1' + phoneNumber.replace(/[^\d+]/g, '').replace(/^\+1?/, ''); console.log(`Reformatted phone number: ${phoneNumber}`); }
 
     // Always route directly to the Netlify function
-    const origin = new URL(request.url).origin;
-    const apiUrl = `${origin}/.netlify/functions/mightycall`;
-    console.log(`Forwarding to Netlify function at: ${apiUrl}`);
+    const origin = new URL(request.url).origin; const apiUrl = `${origin}/api/mightycall`; console.log(`Forwarding to Netlify function via redirect at: ${apiUrl}`);
     
     try {
       console.log(`Making fetch request to: ${apiUrl}`);
