@@ -13,25 +13,8 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Specific redirects for each webhook
-[[redirects]]
-  from = "/api/downtown"
-  to = "/.netlify/functions/downtownwebhook"
-  status = 200
-
-[[redirects]]
-  from = "/api/loverslane"
-  to = "/.netlify/functions/loverslanewebhook"
-  status = 200
-
-[[redirects]]
-  from = "/api/plano"
-  to = "/.netlify/functions/planowebhook"
-  status = 200
-
 # Handle client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
