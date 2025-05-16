@@ -52,12 +52,7 @@ export const handleMightycallProxy = async (request: Request): Promise<Response>
     }
 
     // Format phone number if needed
-    let phoneNumber = data.phoneNumber;
-    if (!phoneNumber.startsWith('+')) {
-      console.log("Phone number doesn't start with +, adding it");
-      phoneNumber = '+' + phoneNumber.replace(/[^\d]/g, '');
-      console.log(`Reformatted phone number: ${phoneNumber}`);
-    }
+let phoneNumber = data.phoneNumber; if (!phoneNumber.startsWith('+1')) { console.log("Phone number doesn't start with +1, adding it"); phoneNumber = '+1' + phoneNumber.replace(/[^\d+]/g, '').replace(/^\+1?/, ''); console.log(`Reformatted phone number: ${phoneNumber}`); }
 
     // Always route directly to the Netlify function
     const origin = new URL(request.url).origin;
