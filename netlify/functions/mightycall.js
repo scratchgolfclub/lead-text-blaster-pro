@@ -8,12 +8,10 @@ const corsHeaders = {
 
 // Implement the getAccessToken function directly within the serverless function
 async function getAccessToken() {
-  // MightyCall API constants using environment variables
+  // MightyCall API constants - hardcoded URL prefix and version
   const API_KEY = process.env.MIGHTYCALL_API_KEY;
   const CLIENT_SECRET = process.env.MIGHTYCALL_CLIENT_SECRET;
-  const API_PREFIX = process.env.MIGHTYCALL_API_PREFIX || "api";
-  const API_VERSION = process.env.MIGHTYCALL_API_VERSION || "v4";
-  const AUTH_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/api/auth/token`;
+  const AUTH_URL = 'https://api.mightycall.com/v4/auth/token';
 
   console.log("Requesting access token from:", AUTH_URL);
   console.log("Using API Key:", API_KEY ? "Key exists (not shown)" : "Missing API key");
@@ -118,12 +116,10 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // MightyCall API constants using environment variables
+    // MightyCall API constants - hardcoded URL prefix and version
     const API_KEY = process.env.MIGHTYCALL_API_KEY;
     const FROM_NUMBER = process.env.MIGHTYCALL_FROM_NUMBER;
-    const API_PREFIX = process.env.MIGHTYCALL_API_PREFIX || "api";
-    const API_VERSION = process.env.MIGHTYCALL_API_VERSION || "v4";
-    const SMS_URL = `https://${API_PREFIX}.mightycall.com/${API_VERSION}/api/contactcenter/messages/send`;
+    const SMS_URL = 'https://api.mightycall.com/v4/api/contactcenter/messages/send';
 
     // Check for required environment variables
     if (!API_KEY) {
