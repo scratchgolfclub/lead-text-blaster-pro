@@ -10,10 +10,26 @@ export default function handler(request: Request) {
   
   console.log(`API handler processing request for: ${path}`);
   
-  // Route to the webhook handler
+  // Route to the webhook handler (using legacy path for backward compatibility)
   if (path.endsWith('/api/webhook')) {
-    console.log('Routing to webhook handler');
+    console.log('Routing to webhook handler (legacy)');
     return handleWebhook(request);
+  }
+  
+  // Route to location-specific webhook handlers
+  if (path.endsWith('/api/downtown')) {
+    console.log('Routing to downtown webhook handler');
+    return handleWebhook(request, "Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club downtown. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?");
+  }
+  
+  if (path.endsWith('/api/loverslane')) {
+    console.log('Routing to lovers lane webhook handler');
+    return handleWebhook(request, "Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club at Lovers Lane. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?");
+  }
+  
+  if (path.endsWith('/api/plano')) {
+    console.log('Routing to plano webhook handler');
+    return handleWebhook(request, "Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club in Plano. Would you like to reserve your spot on the waitlist?");
   }
   
   // Route to the MightyCall proxy handler

@@ -37,7 +37,7 @@ const isValidPhoneNumber = (phone) => {
 };
 
 exports.handler = async (event, context) => {
-  console.log("Webhook function called with event:", {
+  console.log("Lovers Lane webhook function called with event:", {
     method: event.httpMethod,
     path: event.path,
     // Safely access headers if they exist
@@ -71,7 +71,7 @@ exports.handler = async (event, context) => {
     let data;
     try {
       data = JSON.parse(event.body);
-      console.log('Webhook received data:', data);
+      console.log('Lovers Lane webhook received data:', data);
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
       return {
@@ -156,7 +156,7 @@ exports.handler = async (event, context) => {
         httpMethod: 'POST',
         body: JSON.stringify({
           phoneNumber: formattedPhone,
-          message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
+          message: "Hi, this is Griffin with Scratch Golf Club! I saw that you were interested in joining our club at Lovers Lane. Are you ready to join as a member or would you like to come in for a trial to experience the facility first?"
         }),
         // Add empty headers to avoid null reference errors
         headers: {}
