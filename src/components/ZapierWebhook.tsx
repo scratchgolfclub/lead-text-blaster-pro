@@ -1,11 +1,11 @@
+
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Phone } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PhoneMessageForm } from "@/components/zapier/PhoneMessageForm";
+import { ActivityLogs } from "@/components/zapier/ActivityLogs";
+import { EnvironmentAlert } from "@/components/zapier/EnvironmentAlert";
+import { validatePhoneNumber } from "@/components/zapier/phoneUtils";
 
 // Default message to be sent to leads
 const DEFAULT_MESSAGE = "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?";
@@ -23,25 +23,6 @@ const ZapierWebhook: React.FC = () => {
   const addLog = (log: string) => {
     setLogs(prevLogs => [...prevLogs, `${new Date().toLocaleTimeString()}: ${log}`]);
     console.log(`LOG: ${log}`); // Also log to console for debugging
-  };
-  
-  // Validate phone number format
-  const validatePhoneNumber = (phone: string): boolean => {
-    // Basic validation for international format
-    const isValid = /^\+\d{10,15}$/.test(phone);
-    
-    if (!isValid) {
-      // If not valid but has some numbers, try to format it
-      if (/\d/.test(phone)) {
-        const formattedPhone = '+' + phone.replace(/[^\d]/g, '');
-        if (/^\+\d{10,15}$/.test(formattedPhone)) {
-          setPhoneNumber(formattedPhone);
-          return true;
-        }
-      }
-    }
-    
-    return isValid;
   };
   
   const handleSendText = async () => {
@@ -168,19 +149,7 @@ const ZapierWebhook: React.FC = () => {
   
   return (
     <div className="container mx-auto p-4">
-      <Alert className="mb-6 bg-amber-50 border-amber-200">
-        <AlertTitle className="text-amber-800">Environment Variables Required</AlertTitle>
-        <AlertDescription className="text-amber-700">
-          <p>This application requires the following environment variables in Netlify:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-1">
-            <li><code>MIGHTYCALL_API_KEY</code> - Your MightyCall API key</li>
-            <li><code>MIGHTYCALL_CLIENT_SECRET</code> - Your MightyCall client secret</li>
-            <li><code>MIGHTYCALL_FROM_NUMBER</code> - Your MightyCall phone number</li>
-            <li>(Optional) <code>MIGHTYCALL_API_PREFIX</code> - API prefix (default: "api")</li>
-            <li>(Optional) <code>MIGHTYCALL_API_VERSION</code> - API version (default: "v4")</li>
-          </ul>
-        </AlertDescription>
-      </Alert>
+      <EnvironmentAlert />
       
       <Card className="mb-8">
         <CardHeader>
@@ -189,77 +158,22 @@ const ZapierWebhook: React.FC = () => {
             Send text messages to leads via MightyCall API
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium mb-1">
-                Phone Number
-              </label>
-              <Input
-                id="phoneNumber"
-                placeholder="+12345678901"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="font-mono"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Include country code (e.g., +1 for US)
-              </p>
-            </div>
-            
-            <div>
-              <label htmlFor="message" className="block text-sm font-medium mb-1">
-                Message
-              </label>
-              <Textarea
-                id="message"
-                className="min-h-[100px] font-mono"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button
-            onClick={handleSendText}
-            disabled={isLoading}
-            className="gap-2"
-          >
-            <Phone size={18} />
-            {isLoading ? "Sending..." : "Send Text Message"}
-          </Button>
-        </CardFooter>
+        
+        <PhoneMessageForm 
+          phoneNumber={phoneNumber}
+          message={message}
+          isLoading={isLoading}
+          onPhoneNumberChange={setPhoneNumber}
+          onMessageChange={setMessage}
+          onSendText={handleSendText}
+        />
       </Card>
       
       <Card>
         <CardHeader>
           <CardTitle>API Activity</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold">Webhook Endpoint (For Zapier Integration)</h3>
-              <p className="text-sm mt-1 font-mono">
-                {window.location.origin}/api/webhook
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Use this URL in your Zapier webhook action with JSON format: {"{ \"phone\": \"+12345678901\" }"}
-              </p>
-            </div>
-            
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">Activity Logs ({logs.length})</h3>
-              <div className="bg-gray-100 p-2 rounded max-h-60 overflow-y-auto text-sm font-mono">
-                {logs.length > 0 ? (
-                  logs.map((log, index) => <div key={index}>{log}</div>)
-                ) : (
-                  <p className="text-gray-500">No activity yet</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
+        <ActivityLogs logs={logs} />
       </Card>
     </div>
   );
