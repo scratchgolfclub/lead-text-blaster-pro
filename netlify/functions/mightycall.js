@@ -74,7 +74,8 @@ exports.handler = async (event, context) => {
   console.log("MightyCall function called with event:", {
     method: event.httpMethod,
     path: event.path,
-    headers: Object.keys(event.headers)
+    // Safely access headers if they exist
+    headers: event.headers ? Object.keys(event.headers) : []
   });
 
   // Handle preflight OPTIONS request
@@ -100,7 +101,7 @@ exports.handler = async (event, context) => {
 
   try {
     // Parse the request body
-    const data = JSON.parse(event.body);
+    const data = JSON.parse(event.body || '{}'); // Add fallback for null/undefined
     console.log('MightyCall proxy received data:', data);
 
     if (!data.phoneNumber || !data.message) {

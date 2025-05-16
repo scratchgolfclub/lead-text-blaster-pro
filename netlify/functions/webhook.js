@@ -40,7 +40,8 @@ exports.handler = async (event, context) => {
   console.log("Webhook function called with event:", {
     method: event.httpMethod,
     path: event.path,
-    headers: Object.keys(event.headers)
+    // Safely access headers if they exist
+    headers: event.headers ? Object.keys(event.headers) : []
   });
   
   // Handle preflight OPTIONS request
@@ -156,7 +157,9 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({
           phoneNumber: formattedPhone,
           message: "I saw that you were interested in scheduling a trial at Scratch Golf Club! Do you have a date and time in mind for when you want to get that scheduled?"
-        })
+        }),
+        // Add empty headers to avoid null reference errors
+        headers: {}
       };
       
       console.log('Calling mightycall handler with:', JSON.parse(mightycallEvent.body));
